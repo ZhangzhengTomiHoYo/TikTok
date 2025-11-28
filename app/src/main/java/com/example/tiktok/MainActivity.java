@@ -9,6 +9,8 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
+import android.util.Log;
+
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
@@ -23,8 +25,10 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout llImageContainer;
     private ActivityResultLauncher<String> pickImageLauncher;
 
-    // 【修改点1】定义一个布尔变量来记录当前操作是“设置封面”还是“添加图片”
+    // 定义一个布尔变量来记录当前操作是“设置封面”还是“添加图片”
     private boolean isSelectingCover = false;
+    // 定义一个布尔变量来记录用户是否已经手动设置过封面
+    private boolean hasManualCoverSet = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,9 +68,23 @@ public class MainActivity extends AppCompatActivity {
                     if (uri != null) {
                         // 【修改点3】根据成员变量判断，而不是去读 Intent
                         if (isSelectingCover) {
-                            ivCover.setImageURI(uri);
-                        } else {
+                                ivCover.setImageURI(uri);
+                                hasManualCoverSet = true; // 用户手动设置了封面
+                                Log.d("MainActivity", "用户手动设置封面成功");
+                            } else {
+                                Log.d("MainActivity", "进入添加图片分支");
                             addImageToContainer(uri);
+                            // 如果还没有设置封面，那么第一张图默认为封面
+                            Log.d("MainActivity", "检查封面状态");
+                            // 如果用户还没有手动设置过封面，则将第一张添加的图片设为封面
+                            if (!hasManualCoverSet) {
+                                Log.d("MainActivity", "用户未手动设置过封面，将第一张图片设为封面");
+                                ivCover.setImageURI(uri);
+                                hasManualCoverSet = true; // 设置了封面
+                                Log.d("MainActivity", "封面设置成功");
+                            } else {
+                                Log.d("MainActivity", "用户已手动设置过封面，保留原有封面");
+                            }
                         }
                     }
                 }
