@@ -135,9 +135,11 @@ public class MainActivity extends AppCompatActivity {
         // 4.
         // 4.1 llImageContainer.getChildCount()：获取 LinearLayout 里的子 View 总数（包含 “添加图片” 的加号按钮）；
         // 4.2 -1：因为加号按钮是 LinearLayout 的最后一个子 View，所以插入到 “最后一个位置的前一位”，保证新图片出现在加号左边；
-        int index = llImageContainer.getChildCount() - 1;
+        // 4.2 mod-> 删去-1 让添加按钮始终在最前面
+        int index = llImageContainer.getChildCount();
         // 4.3 异常处理：如果容器为空（getChildCount ()=0），index 会是 -1，此时设为 0，避免添加 View 时索引越界。
-        if (index < 0) index = 0; // 防止容器为空时的异常
+        // 4.3 mod ->不需要了 因为永远>=0
+//        if (index < 0) index = 0; // 防止容器为空时的异常
         // 4.4 addView(View, index)：把新创建的 ImageView 插入到 LinearLayout 的指定索引位置；
         //因为 llImageContainer 被 HorizontalScrollView 包裹，所以新增的图片会自动支持横向滚动（HorizontalScrollView 的核心作用就是让内部的 LinearLayout 可以横向滑动）。
         llImageContainer.addView(imageView, index);
