@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
     private final int MAX_DESC_LENGTH = 200; // 字数限制常量
 
     // 本地写死的数据源
-    private final String[] friendList = {"Alice", "Bob", "Charlie", "David", "Emma", "老王", "张三"};
+    private final String[] friendList = {"Alice", "Bob", "Charlie", "David", "Emma", "张三"};
     private final String[] hotTopicList = {"#旅行日记", "#美食探店", "#日常生活", "#萌宠时刻", "#技术分享", "#Android开发"};
     // ---------------------------
 
