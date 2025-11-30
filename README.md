@@ -8,7 +8,7 @@
 | 层级         | 职责                                                                 |
 |--------------|----------------------------------------------------------------------|
 | 布局层       | 基于XML实现页面结构，通过`LinearLayout`/`RelativeLayout`/`ScrollView`组合实现垂直滚动，`HorizontalScrollView`处理横向图片列表/热门话题； |
-| 功能模块层   | 拆分为图片管理、文字编辑、定位获取、权限处理4个核心模块，低耦合独立实现； |
+| 功能模块层   | 拆分为图片管理、文字编辑、定位获取、权限处理4个核心模块 |
 | 交互逻辑层   | 通过控件点击事件、文本监听、位置监听等处理用户操作，实时反馈UI变化；     |
 
 ### 3. 核心执行流程
@@ -184,20 +184,12 @@ private void getLocation() {
 ```
 
 ## 三、开发总结（3个核心技术问题+优化思路）
-### 问题1：Android版本权限适配不兼容
+### 问题1：拖拽实现图片排序失败
 #### 问题描述
-- Android 13（API 33）将相册权限从`READ_EXTERNAL_STORAGE`改为`READ_MEDIA_IMAGES`，直接使用旧权限会导致高版本手机无法访问相册；
-- 定位权限在Android 10+区分“精确”和“模糊”，未适配会导致部分手机定位失败。
+- 在实现图片顺序调整时，最初想要通过拖拽实现，但是难度较大，失败
 
-#### 优化思路
-1. 按API版本分支处理权限常量：
-   ```java
-   String permission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU 
-           ? Manifest.permission.READ_MEDIA_IMAGES 
-           : Manifest.permission.READ_EXTERNAL_STORAGE;
-   ```
-2. 定位权限采用“多权限请求”模式，同时请求`ACCESS_FINE_LOCATION`和`ACCESS_COARSE_LOCATION`，兼容不同授权状态；
-3. 权限请求后增加兜底提示，告知用户权限拒绝的影响。
+#### 解决思路
+1. 在图片上设置左右按钮，点击实现左右移动的逻辑
 
 ### 问题2：热门话题UI排版错乱
 #### 问题描述
