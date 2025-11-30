@@ -46,32 +46,45 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
+            <!-- ================= 修改开始 ================= -->
             <!-- 封面图编辑区域 -->
+            <!-- 1. 高度改为 wrap_content，去除多余空白，让下方内容上移 -->
             <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="300dp"
-                android:layout_margin="16dp">
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="24dp"> <!-- 增加一点下边距，与图片选择区隔开 -->
 
+                <!-- 封面图 -->
                 <ImageView
                     android:id="@+id/iv_cover"
                     android:layout_width="120dp"
                     android:layout_height="200dp"
                     android:layout_centerHorizontal="true"
                     android:scaleType="centerCrop"
+                    android:background="#333333"
                     app:srcCompat="@android:drawable/ic_menu_gallery" />
 
-                <Button
+                <!-- 编辑按钮 -->
+                <!-- 2. layout_alignBottom: 让按钮底部与图片底部对齐，实现堆叠 -->
+                <!-- 3. 去掉了 layout_below 和 layout_marginTop -->
+                <!-- 将 Button 改为 TextView，完美解决文字显示不全问题 -->
+                <TextView
                     android:id="@+id/btn_edit_cover"
                     android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:layout_below="@id/iv_cover"
+                    android:layout_height="32dp"
+                    android:layout_alignBottom="@id/iv_cover"
                     android:layout_centerHorizontal="true"
-                    android:layout_marginTop="12dp"
-                    android:background="#4CAF50"
+                    android:layout_marginBottom="8dp"
+                    android:background="#CC4CAF50"
                     android:text="编辑封面"
                     android:textColor="#FFFFFF"
-                    android:textSize="14sp" />
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:paddingHorizontal="12dp" />
+                <!-- 注：#CC4CAF50 是带一点透明度的绿色，看起来更像浮层 -->
             </RelativeLayout>
+            <!-- ================= 修改结束 ================= -->
 
             <!-- 图片选择区域 -->
             <HorizontalScrollView
@@ -124,7 +137,7 @@
                 android:textColorHint="#888888"
                 android:textSize="16sp" />
 
-            <!-- 【新增】字数统计显示 -->
+            <!-- 字数统计显示 -->
             <TextView
                 android:id="@+id/tv_word_count"
                 android:layout_width="match_parent"
@@ -153,7 +166,6 @@
                     android:background="#333333"
                     android:layout_marginRight="8dp" />
 
-                <!-- 【修改】改为直接显示文字，避免 strings.xml 报错 -->
                 <TextView
                     android:id="@+id/at_friend"
                     android:layout_width="wrap_content"
@@ -183,7 +195,6 @@
                 android:textSize="14sp"
                 android:layout_marginTop="12dp" />
 
-            <!-- 外层包裹 HorizontalScrollView 以支持左右滑动 -->
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

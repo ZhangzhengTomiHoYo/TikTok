@@ -76,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
         // 绑定控件（确保 XML 中有对应 ID）
         ivCover = findViewById(R.id.iv_cover);
         llImageContainer = findViewById(R.id.ll_image_container);
-        Button btnEditCover = findViewById(R.id.btn_edit_cover);
+        View  btnEditCover = findViewById(R.id.btn_edit_cover);
         btnAddImage = findViewById(R.id.btn_add_image); // 初始化加号按钮
 
         // --- 【新增】绑定并初始化文字编辑功能 ---
