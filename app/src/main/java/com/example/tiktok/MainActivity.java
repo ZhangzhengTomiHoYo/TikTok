@@ -2,26 +2,32 @@ package com.example.tiktok;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.DialogInterface; // 新增：用于弹窗
 import android.content.pm.PackageManager;
+import android.graphics.Color; // 新增：用于颜色
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.TextUtils; // 新增：用于文字处理
 import android.util.Log;
+import android.util.TypedValue; // 新增：用于尺寸转换
+import android.view.Gravity; // 新增：用于对齐
 import android.widget.Button;
+import android.widget.EditText; // 新增
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.util.Log;
 
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog; // 新增：原生弹窗
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -33,6 +39,14 @@ public class MainActivity extends AppCompatActivity {
     private ImageView ivCover;
     private LinearLayout llImageContainer;
     private ActivityResultLauncher<String> pickImageLauncher;
+
+    // --- 【新增】文字编辑相关的变量 ---
+    private EditText etDescription;
+    private LinearLayout llHotTopics;
+    // 本地写死的数据源
+    private final String[] friendList = {"Alice", "Bob", "Charlie", "David", "Emma", "老王", "张三"};
+    private final String[] hotTopicList = {"#旅行日记", "#美食探店", "#日常生活", "#萌宠时刻", "#技术分享", "#Android开发"};
+    // ---------------------------
 
     // --- 【新增】定位相关的变量 ---
     private TextView tvLocation;
@@ -73,6 +87,14 @@ public class MainActivity extends AppCompatActivity {
         tvLocation.setOnClickListener(v -> checkLocationPermissionAndGet());
         // ---------------------------
 
+        // --- 【新增】绑定并初始化文字编辑功能 ---
+        etDescription = findViewById(R.id.et_description); // 对应 XML 中的 id
+        llHotTopics = findViewById(R.id.ll_hot_topics);   // 对应 XML 中的 id
+
+        initTextEditingLogic(); // 初始化 @ 和 # 按钮逻辑
+        initHotTopics();        // 初始化热门话题列表（已修复显示问题）
+        // ------------------------------------
+
         btnEditCover.setOnClickListener(v -> {
             isSelectingCover = true;
             checkPermissionAndPickImage();
@@ -87,6 +109,103 @@ public class MainActivity extends AppCompatActivity {
         checkLocationPermissionAndGet();
     }
 
+    // ================== 【新增】文字编辑功能逻辑 ==================
+
+    /**
+     * 初始化 @好友 和 #话题 按钮的点击事件
+     */
+    private void initTextEditingLogic() {
+        // 注意：这里需要确保 XML 里这两个 TextView 的 ID 分别是 at_friend 和 tv_topics
+        TextView btnAtFriend = findViewById(R.id.at_friend);
+        TextView btnAddTopic = findViewById(R.id.tv_topics);
+
+        // 1. 处理 @ 好友功能
+        if (btnAtFriend != null) {
+            btnAtFriend.setOnClickListener(v -> {
+                // 使用原生 AlertDialog 展示好友列表
+                new AlertDialog.Builder(this)
+                        .setTitle("选择要提醒的好友")
+                        .setItems(friendList, (dialog, which) -> {
+                            String selectedFriend = friendList[which];
+                            // 将 @Name 插入到输入框
+                            appendTagToDescription("@" + selectedFriend + " ");
+                        })
+                        .show();
+            });
+        }
+
+        // 2. 处理 # 话题按钮 (手动添加)
+        if (btnAddTopic != null) {
+            btnAddTopic.setOnClickListener(v -> {
+                // 点击只插入 # 符号，让用户自己输入
+                appendTagToDescription("#");
+            });
+        }
+    }
+
+    /**
+     * 初始化热门话题区域 (动态添加 View)
+     * 【修复】增加了 setSingleLine 和 LayoutParams 调整，解决文字换行挤压问题
+     */
+    private void initHotTopics() {
+        if (llHotTopics == null) return;
+
+        // 清除可能存在的旧视图
+        llHotTopics.removeAllViews();
+
+        // 遍历本地写死的话题数据
+        for (String topic : hotTopicList) {
+            TextView tvTopic = new TextView(this);
+            tvTopic.setText(topic);
+            tvTopic.setTextColor(Color.WHITE);
+            tvTopic.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13); // 字体稍微改小一点点，更精致
+
+            // 关键修复：强制单行显示，防止出现截图中的换行情况
+            tvTopic.setSingleLine(true);
+            tvTopic.setEllipsize(TextUtils.TruncateAt.END);
+
+            // 设置背景：深灰色圆角效果（如果 XML 没有定义 drawable，这里用纯色背景代替）
+            tvTopic.setBackgroundColor(Color.parseColor("#333333"));
+
+            // 设置内边距 (Padding)：让文字周围有呼吸感，看起来像按钮
+            // 左右 12dp, 上下 6dp
+            int paddingH = (int) (12 * getResources().getDisplayMetrics().density);
+            int paddingV = (int) (6 * getResources().getDisplayMetrics().density);
+            tvTopic.setPadding(paddingH, paddingV, paddingH, paddingV);
+
+            tvTopic.setGravity(Gravity.CENTER);
+
+            // 设置布局参数 (LayoutMargin)
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            // 设置右边距，让话题之间有间隔
+            params.setMargins(0, 0, (int)(8 * getResources().getDisplayMetrics().density), 0);
+            tvTopic.setLayoutParams(params);
+
+            // 点击热门话题，直接上屏
+            tvTopic.setOnClickListener(v -> {
+                appendTagToDescription(topic + " ");
+            });
+
+            // 添加到横向滚动的容器中
+            llHotTopics.addView(tvTopic);
+        }
+    }
+
+    /**
+     * 辅助方法：将文本追加到 EditText 中
+     */
+    private void appendTagToDescription(String textToAppend) {
+        if (etDescription != null) {
+            etDescription.append(textToAppend);
+            // 将光标移动到文本末尾，方便用户继续输入
+            etDescription.setSelection(etDescription.getText().length());
+        }
+    }
+    // ========================================================
+
     // ================== 图片逻辑 (保持不变) ==================
     private void initImagePicker() {
         // 注册 Activity Result 回调
@@ -99,11 +218,11 @@ public class MainActivity extends AppCompatActivity {
                     if (uri != null) {
                         // 【修改点3】根据成员变量判断，而不是去读 Intent
                         if (isSelectingCover) {
-                                ivCover.setImageURI(uri);
-                                hasManualCoverSet = true; // 用户手动设置了封面
-                                Log.d("MainActivity", "用户手动设置封面成功");
-                            } else {
-                                Log.d("MainActivity", "进入添加图片分支");
+                            ivCover.setImageURI(uri);
+                            hasManualCoverSet = true; // 用户手动设置了封面
+                            Log.d("MainActivity", "用户手动设置封面成功");
+                        } else {
+                            Log.d("MainActivity", "进入添加图片分支");
                             addImageToContainer(uri);
                             // 如果还没有设置封面，那么第一张图默认为封面
                             Log.d("MainActivity", "检查封面状态");

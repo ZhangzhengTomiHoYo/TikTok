@@ -162,6 +162,7 @@
             </LinearLayout>
 
             <!-- 热门话题区域 -->
+            <!-- 热门话题区域 -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -170,15 +171,23 @@
                 android:textSize="14sp"
                 android:layout_marginTop="12dp" />
 
-            <LinearLayout
-                android:id="@+id/ll_hot_topics"
+            <!-- 【修改处】外层包裹 HorizontalScrollView 以支持左右滑动 -->
+            <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginBottom="16dp"
-                android:orientation="horizontal"
-                android:scrollbars="horizontal">
-            </LinearLayout>
+                android:scrollbars="none"> <!-- scrollbars="none" 可以隐藏滚动条，看起来更像原生App -->
+
+                <LinearLayout
+                    android:id="@+id/ll_hot_topics"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <!-- 这里的内容会由 Java 代码动态填充 -->
+                </LinearLayout>
+
+            </HorizontalScrollView>
 
             <!-- 分割线 -->
             <View
