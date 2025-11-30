@@ -1,13 +1,19 @@
 package com.example.tiktok;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.util.Log;
 
@@ -15,9 +21,12 @@ import android.util.Log;
 import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -25,9 +34,14 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout llImageContainer;
     private ActivityResultLauncher<String> pickImageLauncher;
 
-    // 定义一个布尔变量来记录当前操作是“设置封面”还是“添加图片”
+    // --- 【新增】定位相关的变量 ---
+    private TextView tvLocation;
+    private ImageView ivClearLocation;
+    private LocationManager locationManager;
+    private ActivityResultLauncher<String[]> locationPermissionLauncher;
+    // ---------------------------
+
     private boolean isSelectingCover = false;
-    // 定义一个布尔变量来记录用户是否已经手动设置过封面
     private boolean hasManualCoverSet = false;
 
     @Override
@@ -36,27 +50,44 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        // 【修改点2】必须先初始化图片选择器，否则 pickImageLauncher 为空
         initImagePicker();
+        // --- 【新增】初始化定位权限启动器 ---
+        initLocationPermissionLauncher();
 
         ivCover = findViewById(R.id.iv_cover);
         llImageContainer = findViewById(R.id.ll_image_container);
         Button btnEditCover = findViewById(R.id.btn_edit_cover);
         Button btnAddImage = findViewById(R.id.btn_add_image);
 
-        // 编辑封面
+        // --- 【新增】绑定定位UI控件 ---
+        tvLocation = findViewById(R.id.tv_location);
+        ivClearLocation = findViewById(R.id.iv_clear_location);
+
+        // 点击清除图标重置位置信息
+        ivClearLocation.setOnClickListener(v -> {
+            tvLocation.setText("添加位置");
+            Toast.makeText(MainActivity.this, "位置已清除", Toast.LENGTH_SHORT).show();
+        });
+
+        // 点击文字也可以重新获取位置
+        tvLocation.setOnClickListener(v -> checkLocationPermissionAndGet());
+        // ---------------------------
+
         btnEditCover.setOnClickListener(v -> {
-            isSelectingCover = true; // 标记为封面
+            isSelectingCover = true;
             checkPermissionAndPickImage();
         });
 
-        // 添加图片
         btnAddImage.setOnClickListener(v -> {
-            isSelectingCover = false; // 标记为普通图片
+            isSelectingCover = false;
             checkPermissionAndPickImage();
         });
+
+        // --- 【新增】页面加载时自动开始获取位置 ---
+        checkLocationPermissionAndGet();
     }
 
+    // ================== 图片逻辑 (保持不变) ==================
     private void initImagePicker() {
         // 注册 Activity Result 回调
         pickImageLauncher = registerForActivityResult(
@@ -145,12 +176,115 @@ public class MainActivity extends AppCompatActivity {
         llImageContainer.addView(imageView, index);
     }
 
+    // ================== 【新增】定位逻辑代码 ==================
+
+    // 1. 初始化权限回调
+    private void initLocationPermissionLauncher() {
+        locationPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestMultiplePermissions(),
+                result -> {
+                    Boolean fineLocationGranted = result.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false);
+                    Boolean coarseLocationGranted = result.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false);
+
+                    if (fineLocationGranted != null && fineLocationGranted) {
+                        // 精确位置已授权
+                        getLocation();
+                    } else if (coarseLocationGranted != null && coarseLocationGranted) {
+                        // 模糊位置已授权
+                        getLocation();
+                    } else {
+                        tvLocation.setText("未获得定位权限");
+                        Toast.makeText(this, "需要定位权限才能显示位置", Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
+    }
+
+    // 2. 检查权限并请求
+    private void checkLocationPermissionAndGet() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            getLocation();
+        } else {
+            // 请求定位权限
+            locationPermissionLauncher.launch(new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+            });
+        }
+    }
+
+    // 3. 获取经纬度核心逻辑
+    private void getLocation() {
+        try {
+            tvLocation.setText("正在定位中...");
+            locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
+            // 检查GPS是否开启
+            if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) &&
+                    !locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                tvLocation.setText("请开启手机GPS");
+                return;
+            }
+
+            // 获取位置监听器
+            LocationListener locationListener = new LocationListener() {
+                @Override
+                public void onLocationChanged(@NonNull Location location) {
+                    // 获取到经纬度
+                    double latitude = location.getLatitude();
+                    double longitude = location.getLongitude();
+
+                    // 格式化显示 (保留2位小数)
+                    String locationStr = String.format("纬度: %.2f, 经度: %.2f", latitude, longitude);
+                    tvLocation.setText(locationStr);
+                    Log.d("Location", "Location acquired: " + locationStr);
+
+                    // 获取到一次后，移除监听，省电
+                    locationManager.removeUpdates(this);
+                }
+
+                @Override
+                public void onProviderDisabled(@NonNull String provider) {}
+                @Override
+                public void onProviderEnabled(@NonNull String provider) {}
+                @Override
+                public void onStatusChanged(String provider, int status, Bundle extras) {}
+            };
+
+            // 请求位置更新 (使用 Network 或 GPS)
+            // 权限检查已经在外部做过了，这里用 SecurityException 捕获即可
+            List<String> providers = locationManager.getProviders(true);
+            String bestProvider = LocationManager.NETWORK_PROVIDER;
+            if (providers.contains(LocationManager.GPS_PROVIDER)) {
+                bestProvider = LocationManager.GPS_PROVIDER;
+            }
+
+            // 请求更新：provider, 最小时间间隔0ms, 最小距离0米, 监听器
+            locationManager.requestLocationUpdates(bestProvider, 0, 0, locationListener);
+
+            // 尝试立即获取最后一次已知位置作为兜底
+            Location lastKnownLocation = locationManager.getLastKnownLocation(bestProvider);
+            if (lastKnownLocation != null) {
+                String locationStr = String.format("纬度: %.2f, 经度: %.2f", lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude());
+                tvLocation.setText(locationStr);
+            }
+
+        } catch (SecurityException e) {
+            e.printStackTrace();
+            tvLocation.setText("定位权限异常");
+        } catch (Exception e) {
+            e.printStackTrace();
+            tvLocation.setText("定位服务不可用");
+        }
+    }
+
+    // 这一段是原有的相册权限回调，保持不变
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 1001) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // 权限申请成功，直接打开相册
                 pickImageLauncher.launch("image/*");
             } else {
                 Toast.makeText(this, "请开启相册权限", Toast.LENGTH_SHORT).show();
