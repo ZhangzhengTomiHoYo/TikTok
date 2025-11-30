@@ -331,7 +331,7 @@ public class MainActivity extends AppCompatActivity {
         deleteParams.gravity = Gravity.TOP | Gravity.RIGHT; // 右上角
         deleteParams.setMargins(0, 4, 4, 0); // 稍微留点边距
         btnDelete.setLayoutParams(deleteParams);
-        // 使用系统自带的关闭图标，或者你可以换成红色背景的X
+        // 使用系统自带的关闭图标
         btnDelete.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
         btnDelete.setBackgroundColor(Color.parseColor("#80000000")); // 半透明黑底，看清楚点
 
