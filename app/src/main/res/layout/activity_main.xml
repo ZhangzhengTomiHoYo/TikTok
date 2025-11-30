@@ -116,13 +116,25 @@
                 android:layout_width="match_parent"
                 android:layout_height="120dp"
                 android:layout_marginHorizontal="16dp"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="4dp"
                 android:background="@null"
                 android:gravity="top"
                 android:hint="添加作品描述..."
                 android:textColor="#FFFFFF"
                 android:textColorHint="#888888"
                 android:textSize="16sp" />
+
+            <!-- 【新增】字数统计显示 -->
+            <TextView
+                android:id="@+id/tv_word_count"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:gravity="right"
+                android:text="0/200"
+                android:textColor="#888888"
+                android:textSize="12sp"
+                android:layout_marginBottom="8dp"/>
 
             <!-- 话题标签区域 -->
             <LinearLayout
@@ -141,11 +153,12 @@
                     android:background="#333333"
                     android:layout_marginRight="8dp" />
 
+                <!-- 【修改】改为直接显示文字，避免 strings.xml 报错 -->
                 <TextView
                     android:id="@+id/at_friend"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/at_friend"
+                    android:text="\@ 朋友"
                     android:textColor="@android:color/holo_blue_light"
                     android:textSize="16sp"
                     android:padding="8dp"
@@ -162,7 +175,6 @@
             </LinearLayout>
 
             <!-- 热门话题区域 -->
-            <!-- 热门话题区域 -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -171,13 +183,13 @@
                 android:textSize="14sp"
                 android:layout_marginTop="12dp" />
 
-            <!-- 【修改处】外层包裹 HorizontalScrollView 以支持左右滑动 -->
+            <!-- 外层包裹 HorizontalScrollView 以支持左右滑动 -->
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginBottom="16dp"
-                android:scrollbars="none"> <!-- scrollbars="none" 可以隐藏滚动条，看起来更像原生App -->
+                android:scrollbars="none">
 
                 <LinearLayout
                     android:id="@+id/ll_hot_topics"

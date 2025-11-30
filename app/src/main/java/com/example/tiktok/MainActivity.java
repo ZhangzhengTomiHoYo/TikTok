@@ -2,7 +2,6 @@ package com.example.tiktok;
 
 import android.Manifest;
 import android.content.Context;
-import android.content.DialogInterface; // 新增：用于弹窗
 import android.content.pm.PackageManager;
 import android.graphics.Color; // 新增：用于颜色
 import android.location.Location;
@@ -11,12 +10,18 @@ import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.Editable; // 新增：用于文字变化监听
+import android.text.InputFilter; // 新增：用于字数限制
 import android.text.TextUtils; // 新增：用于文字处理
+import android.text.TextWatcher; // 新增：用于文字监听
 import android.util.Log;
 import android.util.TypedValue; // 新增：用于尺寸转换
 import android.view.Gravity; // 新增：用于对齐
+import android.view.View; // 新增：用于View操作
+import android.view.ViewGroup; // 新增
 import android.widget.Button;
 import android.widget.EditText; // 新增
+import android.widget.FrameLayout; // 新增：用于图片容器
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -38,11 +43,15 @@ public class MainActivity extends AppCompatActivity {
 
     private ImageView ivCover;
     private LinearLayout llImageContainer;
+    private Button btnAddImage; // 提升为成员变量，方便在排序时定位
     private ActivityResultLauncher<String> pickImageLauncher;
 
     // --- 【新增】文字编辑相关的变量 ---
     private EditText etDescription;
+    private TextView tvWordCount; // 新增：字数显示控件
     private LinearLayout llHotTopics;
+    private final int MAX_DESC_LENGTH = 200; // 字数限制常量
+
     // 本地写死的数据源
     private final String[] friendList = {"Alice", "Bob", "Charlie", "David", "Emma", "老王", "张三"};
     private final String[] hotTopicList = {"#旅行日记", "#美食探店", "#日常生活", "#萌宠时刻", "#技术分享", "#Android开发"};
@@ -64,14 +73,20 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        initImagePicker();
-        // --- 【新增】初始化定位权限启动器 ---
-        initLocationPermissionLauncher();
-
+        // 绑定控件（确保 XML 中有对应 ID）
         ivCover = findViewById(R.id.iv_cover);
         llImageContainer = findViewById(R.id.ll_image_container);
         Button btnEditCover = findViewById(R.id.btn_edit_cover);
-        Button btnAddImage = findViewById(R.id.btn_add_image);
+        btnAddImage = findViewById(R.id.btn_add_image); // 初始化加号按钮
+
+        // --- 【新增】绑定并初始化文字编辑功能 ---
+        etDescription = findViewById(R.id.et_description); // 对应 XML 中的 id
+        tvWordCount = findViewById(R.id.tv_word_count);     // 新增的字数统计控件
+        llHotTopics = findViewById(R.id.ll_hot_topics);   // 对应 XML 中的 id
+
+        initImagePicker();
+        // --- 【新增】初始化定位权限启动器 ---
+        initLocationPermissionLauncher();
 
         // --- 【新增】绑定定位UI控件 ---
         tvLocation = findViewById(R.id.tv_location);
@@ -87,12 +102,9 @@ public class MainActivity extends AppCompatActivity {
         tvLocation.setOnClickListener(v -> checkLocationPermissionAndGet());
         // ---------------------------
 
-        // --- 【新增】绑定并初始化文字编辑功能 ---
-        etDescription = findViewById(R.id.et_description); // 对应 XML 中的 id
-        llHotTopics = findViewById(R.id.ll_hot_topics);   // 对应 XML 中的 id
-
         initTextEditingLogic(); // 初始化 @ 和 # 按钮逻辑
         initHotTopics();        // 初始化热门话题列表（已修复显示问题）
+        initWordCountLogic();   // 初始化字数统计逻辑
         // ------------------------------------
 
         btnEditCover.setOnClickListener(v -> {
@@ -109,7 +121,40 @@ public class MainActivity extends AppCompatActivity {
         checkLocationPermissionAndGet();
     }
 
-    // ================== 【新增】文字编辑功能逻辑 ==================
+    // ================== 【新增】文字编辑与统计逻辑 ==================
+
+    /**
+     * 初始化字数统计和限制
+     */
+    private void initWordCountLogic() {
+        if (etDescription == null || tvWordCount == null) return;
+
+        // 1. 设置最大输入长度限制
+        etDescription.setFilters(new InputFilter[]{new InputFilter.LengthFilter(MAX_DESC_LENGTH)});
+
+        // 2. 监听输入内容变化
+        etDescription.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                // 更新字数显示
+                int length = s.length();
+                tvWordCount.setText(length + "/" + MAX_DESC_LENGTH);
+
+                // 如果字数达到上限，改变颜色提示
+                if (length >= MAX_DESC_LENGTH) {
+                    tvWordCount.setTextColor(Color.RED);
+                } else {
+                    tvWordCount.setTextColor(Color.parseColor("#888888"));
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+    }
 
     /**
      * 初始化 @好友 和 #话题 按钮的点击事件
@@ -257,42 +302,107 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // --- 【修改】使用 FrameLayout 包装图片和操作按钮 ---
     private void addImageToContainer(Uri imageUri) {
-        // 1. 原来的layout中没有imageview，只是一个horscroview，所以要new
-        ImageView imageView = new ImageView(this);
-        // 2.
-        // 2.1 Android 中布局参数（宽高、间距）的单位是像素（px），但设计稿通常用 DP（设备无关像素），不同手机的 DP 和 PX 换算比例不同（比如 1DP 在 1x 屏幕 = 1PX，2x 屏幕 = 2PX）；
-        // 2.2 getDisplayMetrics().density：获取当前设备的 DP→PX 缩放比（比如 3.0 代表 1DP=3PX）；
-        // 2.3 80DP 转成像素：保证不同分辨率手机上，新增图片的大小一致；12DP 是图片右侧的间距，避免图片挤在一起。
-        // 设置宽高为 80dp (需要转换成像素，这里简化处理，实际建议用 dp 转 px 工具)
+        // 1. 创建 FrameLayout 容器
+        FrameLayout frameLayout = new FrameLayout(this);
+
         int size = (int) (80 * getResources().getDisplayMetrics().density);
         int margin = (int) (12 * getResources().getDisplayMetrics().density);
 
-        // 3.
-        // 3.1 LinearLayout.LayoutParams：因为父容器 llImageContainer 是 LinearLayout（包裹在 HorizontalScrollView 里），所以必须用对应的布局参数类；
-        // 3.2 LayoutParams(size, size)：设置 ImageView 的宽高为转换后的 80DP 像素；
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
-        // 3.3 setMargins(左, 上, 右, 下)：只给右侧设 12DP 间距，让图片之间有间隙，更美观。
-        params.setMargins(0, 0, margin, 0);
-        imageView.setLayoutParams(params);
-        // 3.4 CENTER_CROP：图片按比例缩放，填满 ImageView 的宽高，超出部分裁剪，保证图片不变形（如果用默认的 FIT_CENTER 会导致图片拉伸 / 留空白）
+        LinearLayout.LayoutParams frameParams = new LinearLayout.LayoutParams(size, size);
+        frameParams.setMargins(0, 0, margin, 0);
+        frameLayout.setLayoutParams(frameParams);
+
+        // 2. 创建图片内容 (底图)
+        ImageView imageView = new ImageView(this);
+        FrameLayout.LayoutParams imgParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT);
+        imageView.setLayoutParams(imgParams);
         imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        // 3.5 和设置封面的核心逻辑一致：通过 Uri 定位选中的图片，显示到 ImageView 上；
         imageView.setImageURI(imageUri);
 
-        // 添加到容器中，位置在 "btn_add_image" 之前
-        // getChildCount()-1 刚好就是加号按钮前面的索引
-        // 4.
-        // 4.1 llImageContainer.getChildCount()：获取 LinearLayout 里的子 View 总数（包含 “添加图片” 的加号按钮）；
-        // 4.2 -1：因为加号按钮是 LinearLayout 的最后一个子 View，所以插入到 “最后一个位置的前一位”，保证新图片出现在加号左边；
-        // 4.2 mod-> 删去-1 让添加按钮始终在最前面
-        int index = llImageContainer.getChildCount();
-        // 4.3 异常处理：如果容器为空（getChildCount ()=0），index 会是 -1，此时设为 0，避免添加 View 时索引越界。
-        // 4.3 mod ->不需要了 因为永远>=0
-//        if (index < 0) index = 0; // 防止容器为空时的异常
-        // 4.4 addView(View, index)：把新创建的 ImageView 插入到 LinearLayout 的指定索引位置；
-        //因为 llImageContainer 被 HorizontalScrollView 包裹，所以新增的图片会自动支持横向滚动（HorizontalScrollView 的核心作用就是让内部的 LinearLayout 可以横向滑动）。
-        llImageContainer.addView(imageView, index);
+        // 3. 创建删除按钮 (右上角)
+        ImageView btnDelete = new ImageView(this);
+        // 大小 20dp
+        int iconSize = (int) (20 * getResources().getDisplayMetrics().density);
+        FrameLayout.LayoutParams deleteParams = new FrameLayout.LayoutParams(iconSize, iconSize);
+        deleteParams.gravity = Gravity.TOP | Gravity.RIGHT; // 右上角
+        deleteParams.setMargins(0, 4, 4, 0); // 稍微留点边距
+        btnDelete.setLayoutParams(deleteParams);
+        // 使用系统自带的关闭图标，或者你可以换成红色背景的X
+        btnDelete.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
+        btnDelete.setBackgroundColor(Color.parseColor("#80000000")); // 半透明黑底，看清楚点
+
+        // 删除事件
+        btnDelete.setOnClickListener(v -> {
+            llImageContainer.removeView(frameLayout); // 移除整个容器
+            Toast.makeText(this, "图片已删除", Toast.LENGTH_SHORT).show();
+        });
+
+        // 4. 创建移动控制栏 (底部，包含左移和右移)
+        LinearLayout moveControlLayout = new LinearLayout(this);
+        moveControlLayout.setOrientation(LinearLayout.HORIZONTAL);
+        moveControlLayout.setBackgroundColor(Color.parseColor("#80000000")); // 半透明背景
+        FrameLayout.LayoutParams moveParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                (int)(24 * getResources().getDisplayMetrics().density)); // 高度24dp
+        moveParams.gravity = Gravity.BOTTOM;
+        moveControlLayout.setLayoutParams(moveParams);
+
+        // 左移按钮
+        ImageView btnLeft = new ImageView(this);
+        LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1);
+        btnLeft.setLayoutParams(btnParams);
+        btnLeft.setImageResource(android.R.drawable.ic_media_previous); // 系统向左箭头
+        btnLeft.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        btnLeft.setOnClickListener(v -> moveViewWrapper(frameLayout, -1)); // 向前移
+
+        // 右移按钮
+        ImageView btnRight = new ImageView(this);
+        btnRight.setLayoutParams(btnParams);
+        btnRight.setImageResource(android.R.drawable.ic_media_next); // 系统向右箭头
+        btnRight.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        btnRight.setOnClickListener(v -> moveViewWrapper(frameLayout, 1)); // 向后移
+
+        moveControlLayout.addView(btnLeft);
+        moveControlLayout.addView(btnRight);
+
+        // 5. 将所有控件添加到 FrameLayout 容器
+        frameLayout.addView(imageView);       // 底层
+        frameLayout.addView(btnDelete);       // 上层右上
+        frameLayout.addView(moveControlLayout); // 上层底部
+
+        // 6. 添加到主容器
+        // 找到加号按钮的索引
+        int addBtnIndex = llImageContainer.indexOfChild(btnAddImage);
+        if (addBtnIndex == -1) addBtnIndex = llImageContainer.getChildCount();
+
+        llImageContainer.addView(frameLayout, addBtnIndex);
+    }
+
+    // --- 【修改】移动 View 容器的逻辑 ---
+    private void moveViewWrapper(View view, int direction) {
+        int currentIndex = llImageContainer.indexOfChild(view);
+        int targetIndex = currentIndex + direction;
+        int addBtnIndex = llImageContainer.indexOfChild(btnAddImage);
+
+        // 边界检查：
+        // 1. targetIndex < 0: 已经是第一张
+        // 2. targetIndex >= addBtnIndex: 不能移到+号后面
+        if (targetIndex < 0) {
+            Toast.makeText(this, "已经是第一张了", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (targetIndex >= addBtnIndex) {
+            Toast.makeText(this, "已经是最后一张了", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // 移动：先移除，再在目标位置添加
+        llImageContainer.removeView(view);
+        llImageContainer.addView(view, targetIndex);
     }
 
     // ================== 【新增】定位逻辑代码 ==================
